@@ -5,7 +5,7 @@ import { useToast } from "../context/ToastContext";
 import { ConfirmDialog } from "../components/Modal";
 import Icon from "../components/Icon";
 import { Avatar, Button, EmptyState, ErrorState, PageHeader, SkeletonList, StatusChip } from "../components/ui";
-import { downloadCSV, fmtDateLong, fmtRange } from "../utils";
+import { downloadCSV, fmtDateLong, fmtRange, todayISO } from "../utils";
 
 export default function AdminBookings() {
   useTitle("All bookings");
@@ -76,6 +76,7 @@ export default function AdminBookings() {
             {(serviceList || []).map((s) => <option key={s} value={s}>{s}</option>)}
           </select>
         </label>
+        <Button variant="secondary" size="sm" onClick={() => setDate(todayISO())}>Today</Button>
         {filtered && <Button variant="ghost" size="sm" onClick={() => { setSearch(""); setStatus("all"); setDate(""); setService("all"); }}>Clear</Button>}
         {data && <p className="muted small push-right">{data.length} {data.length === 1 ? "booking" : "bookings"}</p>}
       </section>
