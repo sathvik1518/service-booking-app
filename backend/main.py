@@ -521,6 +521,12 @@ def get_owned_booking(booking_id, user):
     return booking
 
 
+@app.get("/bookings/{booking_id}")
+def get_booking(booking_id: int, user=Depends(current_user)):
+    """One booking. Owners and admins can read it; anyone else gets 404."""
+    return get_owned_booking(booking_id, user)
+
+
 @app.put("/bookings/{booking_id}/reschedule")
 def reschedule_booking(booking_id: int, body: RescheduleIn, user=Depends(require_customer)):
     booking = get_owned_booking(booking_id, user)

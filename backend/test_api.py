@@ -446,3 +446,14 @@ def test_login_is_blocked_after_five_failures(client):
     blocked = client.post("/auth/login", json={"email": "user@test.com", "password": "Pass1234"})
     assert blocked.status_code == 429
     main.FAILED_LOGINS.clear()
+
+
+def test_get_single_booking_only_for_owner(client):
+    admin = admin_headers(client)
+    slot = make_slot(client, admin)
+    owner = register(client, email="owner@test.com")
+    other = register(client, email="other@test.com")
+    booking = client.post("/bookings", headers=owner, json={"slot_id": slot["id"]}).json()
+    assert client.get(f"/bookings/{booking['id']}", headers=owner).status_code == 200
+    assert client.get(f"/bookings/{booking['id']}", headers=other).status_code == 404
+    assert client.get(f"/bookings/{booking['id']}", headers=admin).status_code == 200
