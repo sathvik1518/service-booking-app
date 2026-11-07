@@ -1,5 +1,7 @@
 # CareSlot: Service Booking App
 
+**Live demo:** https://service-booking-app-rose.vercel.app/#/login
+
 A full-stack appointment booking app for a clinic or service centre.
 Customers register, see open slots, book, reschedule, cancel and view their history.
 Admins create slots, see every booking and cancel any of them.
@@ -16,9 +18,9 @@ Admins create slots, see every booking and cancel any of them.
 - "My bookings" with tabs: Upcoming, Past, Cancelled (cancelled records are kept as history)
 
 **Admin**
-- Dashboard: upcoming appointments, open spots, customers, cancellations, next-7-days chart, today's appointments
+- Dashboard: upcoming appointments, open spots, customers, cancellations, next-7-days chart, today's appointments, and a "Coming up" list of the next appointments
 - Slots: add, edit, delete one slot, or **generate** many slots at once (for example 9:00 to 12:00 in 30 minute pieces for a week)
-- Bookings: search by name or email, filter by status, date and service, cancel any booking, export CSV
+- Bookings: search by name or email, filter by status, date (with a "Today" shortcut) and service, cancel any booking, export CSV
 
 **Quality**
 - Booking rules enforced in the database transaction: capacity, no double booking, no overlapping appointments, no past slots
@@ -32,7 +34,7 @@ Admins create slots, see every booking and cancel any of them.
 | Role | Email | Password |
 |---|---|---|
 | Customer | aarav.sharma@gmail.com | Demo@1234 |
-| Admin | admin@careslot.in | Admin@123 |
+| Admin | saisathvik@gmail.com | Admin@123 |
 
 Eleven more customers (Indian names) have the same password, `Demo@1234`. Demo data is created automatically the first time the server starts on an empty database.
 
@@ -82,7 +84,7 @@ python -m pytest -q
 cd frontend
 npm test
 ```
-- 37 API tests: auth, 401/403, validation, slot rules, booking, reschedule, cancel, ownership, two people racing for the last spot, admin filters and stats, SQL injection text
+- 39 API tests: auth, 401/403, validation, slot rules, booking, reschedule, cancel, ownership, two people racing for the last spot, admin filters and stats, SQL injection text, login lockout
 - 34 UI tests: date and time helpers, login form checks, slot cards, route guard, booking flow (filter, confirm, server error, empty and error states)
 
 ## Database
@@ -103,7 +105,7 @@ Docs at `/docs` on the backend. On the live site every path starts with `/api`. 
 | Method | Path | Who | Purpose |
 |---|---|---|---|
 | POST | `/auth/register` | public | Create a customer account, returns a token |
-| POST | `/auth/login` | public | Log in, returns a token |
+| POST | `/auth/login` | public | Log in, returns a token (429 after 5 wrong passwords in 5 minutes) |
 | GET | `/auth/me` | logged in | Who am I |
 | GET | `/slots?date=&service=&available_only=` | logged in | Upcoming slots with spots left |
 | GET | `/services` | logged in | Service names |
@@ -112,6 +114,7 @@ Docs at `/docs` on the backend. On the live site every path starts with `/api`. 
 | PUT / DELETE | `/slots/{id}` | admin | Edit or delete (blocked while it has active bookings) |
 | POST | `/bookings` | customer | Book a slot (409 if full, overlapping, or already booked) |
 | GET | `/bookings/mine` | customer | My history |
+| GET | `/bookings/{id}` | owner or admin | One booking (404 for anyone else) |
 | PUT | `/bookings/{id}/reschedule` | owner | Move to another slot |
 | PATCH | `/bookings/{id}/cancel` | owner or admin | Cancel (the row is kept) |
 | GET | `/admin/bookings` | admin | All bookings with filters |
@@ -122,9 +125,9 @@ Status codes: 401 not logged in, 403 wrong role, 404 not found (also for someone
 ## Deploy (Vercel + Neon)
 
 1. Create a Neon project and copy its connection string.
-2. Push this folder to GitHub, import the repo in Vercel (leave the settings as they are; `vercel.json` does the work).
+2. Push this folder to GitHub, import the repo in Vercel. Leave the settings as they are (`vercel.json` does the work). If Vercel offers a "Services" preset, set **Framework Preset** to **Other**.
 3. In Vercel, Settings, Environment Variables, add:
-   - `DATABASE_URL` = your Neon connection string
+   - `DATABASE_URL` = your Neon connection string (it must start with `postgresql://`, with no quotes or spaces)
    - `JWT_SECRET` = a long random text (40 or more letters and numbers)
 4. Redeploy. The first request creates the tables, the admin and the demo data (a few seconds, once).
 
@@ -139,6 +142,7 @@ The app uses hash links (`/#/login`) so refreshing any page works on static host
 - SQL: every value goes in through `%s` placeholders (no string joining), so SQL injection text is stored harmlessly
 - JWT: signed with `JWT_SECRET`, expires after 8 hours; the role is read from the database on every call
 - Login errors say "Invalid email or password" for both cases, so attackers learn nothing
+- Login lockout: 5 wrong passwords for one email in 5 minutes returns 429. The counter lives in memory, so it resets when the server restarts; a production app would keep it in the database or Redis
 - The token is kept in `localStorage`. This is simple but readable by injected scripts; React escapes all text, and a production app could use an httpOnly cookie instead
 
 ## Project structure
@@ -150,7 +154,7 @@ backend/db.py             Connections, transactions, migration runner
 backend/security.py       Password hashing and JWT
 backend/seed.py           Admin account and demo data (python seed.py --reset)
 backend/migrations/       SQL files that build the tables
-backend/test_api.py       37 API tests
+backend/test_api.py       39 API tests
 frontend/src/pages/       Login, Book, My bookings, Admin dashboard, slots, bookings
 frontend/src/components/  Layout, route guard, modal, slot card, date strip, UI pieces
 frontend/src/context/     Login state and toast messages
