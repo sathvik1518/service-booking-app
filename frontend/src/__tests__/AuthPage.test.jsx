@@ -80,7 +80,7 @@ describe("AuthPage", () => {
   it("fills the demo account when its chip is clicked", async () => {
     show("login");
     await userEvent.click(screen.getByRole("button", { name: "Admin demo" }));
-    expect(screen.getByLabelText("Email")).toHaveValue("admin@careslot.in");
+    expect(screen.getByLabelText("Email")).toHaveValue("saisathvik@gmail.com");
   });
 
   it("the register page asks for a name", () => {

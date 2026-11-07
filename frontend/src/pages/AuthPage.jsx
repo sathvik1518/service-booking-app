@@ -28,7 +28,7 @@ export function validateAuth(mode, values) {
 
 const DEMOS = [
   { label: "Customer demo", email: "aarav.sharma@gmail.com", password: "Demo@1234" },
-  { label: "Admin demo", email: "admin@careslot.in", password: "Admin@123" },
+  { label: "Admin demo", email: "saisathvik@gmail.com", password: "Admin@123" },
 ];
 
 export default function AuthPage({ mode }) {
