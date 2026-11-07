@@ -434,3 +434,15 @@ def test_sql_injection_text_is_harmless(client):
     r = client.post("/auth/login", json={"email": "' OR 1=1 --", "password": "x"})
     assert r.status_code == 401
     assert db.run("SELECT COUNT(*) AS n FROM users", fetch="one")["n"] == 1
+
+
+def test_login_is_blocked_after_five_failures(client):
+    import main
+    main.FAILED_LOGINS.clear()
+    register(client)
+    for _ in range(5):
+        r = client.post("/auth/login", json={"email": "user@test.com", "password": "Wrong1234"})
+        assert r.status_code == 401
+    blocked = client.post("/auth/login", json={"email": "user@test.com", "password": "Pass1234"})
+    assert blocked.status_code == 429
+    main.FAILED_LOGINS.clear()

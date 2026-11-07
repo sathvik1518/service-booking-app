@@ -9,6 +9,8 @@ Roles
 """
 import os
 import re
+import time as clock
+from collections import defaultdict
 from contextlib import asynccontextmanager
 from datetime import date, datetime, time, timedelta
 from typing import Literal, Optional
@@ -293,6 +295,18 @@ def root():
     return {"message": "CareSlot API is running", "docs": "/docs"}
 
 
+FAILED_LOGINS = defaultdict(list)   # email -> times of recent wrong passwords
+MAX_FAILS = 5
+WINDOW_SECONDS = 300                # 5 minutes
+
+
+def too_many_failures(email):
+    now = clock.time()
+    recent = [t for t in FAILED_LOGINS[email] if now - t < WINDOW_SECONDS]
+    FAILED_LOGINS[email] = recent
+    return len(recent) >= MAX_FAILS
+
+
 # --------------------------------------------------------------------------------------
 # Auth
 # --------------------------------------------------------------------------------------
@@ -312,10 +326,14 @@ def register(body: RegisterIn):
 
 @app.post("/auth/login")
 def login(body: LoginIn):
+    if too_many_failures(body.email):
+        raise HTTPException(429, "Too many failed attempts. Please try again in a few minutes.")
     row = db.run("SELECT * FROM users WHERE email = %s", (body.email,), fetch="one")
     # Same message for "no such email" and "wrong password" so attackers learn nothing.
     if row is None or not security.verify_password(body.password, row["password_hash"]):
+        FAILED_LOGINS[body.email].append(clock.time())
         raise HTTPException(401, "Invalid email or password")
+    FAILED_LOGINS.pop(body.email, None)
     return {"token": security.create_token(row["id"], row["role"]), "user": public_user(row)}
 
 
