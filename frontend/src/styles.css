@@ -536,3 +536,16 @@ input:focus-visible, select:focus-visible, textarea:focus-visible { outline: non
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
 }
+
+
+/* iPhone fix: date inputs have a built-in minimum width that pushes them out of their box */
+input[type="date"] {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+  text-align: left;
+}
+input[type="date"]::-webkit-date-and-time-value { text-align: left; }
+.filters .filter { min-width: 0; }
