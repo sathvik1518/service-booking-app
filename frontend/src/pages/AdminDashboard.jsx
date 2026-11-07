@@ -4,7 +4,7 @@ import { useLoad, useTitle } from "../hooks";
 import { useAuth } from "../context/AuthContext";
 import Icon from "../components/Icon";
 import { Avatar, Button, EmptyState, ErrorState, PageHeader, SkeletonList, StatusChip } from "../components/ui";
-import { dateParts, fmtRange, relativeDay } from "../utils";
+import { dateParts, fmtDateLong, fmtRange, relativeDay } from "../utils";
 
 function Tile({ icon, label, value, tone }) {
   return (
@@ -47,7 +47,13 @@ export default function AdminDashboard() {
   const { data, loading, error, reload } = useLoad(async () => {
     const stats = await api.getAdminStats();
     const today = await api.getAdminBookings({ date: stats.today, status: "booked" });
-    return { stats, today: today.slice().sort((a, b) => a.start_time.localeCompare(b.start_time)) };
+    const booked = await api.getAdminBookings({ status: "booked" });
+    // the next few appointments after today, soonest first
+    const next = booked
+      .filter((b) => b.can_cancel && b.slot_date > stats.today)
+      .sort((a, b) => (a.slot_date + a.start_time).localeCompare(b.slot_date + b.start_time))
+      .slice(0, 6);
+    return { stats, next, today: today.slice().sort((a, b) => a.start_time.localeCompare(b.start_time)) };
   }, []);
 
   return (
@@ -106,8 +112,34 @@ export default function AdminDashboard() {
                   ))}
                 </ul>
               )}
-            </section>
+                        </section>
           </div>
+
+          <section className="card coming-card">
+            <div className="card-head">
+              <h2>Coming up</h2>
+              <Link className="link-more" to="/admin/bookings">View all</Link>
+            </div>
+            {data.next.length === 0 ? (
+              <EmptyState icon="calendar" title="No upcoming appointments" text="Bookings after today will show up here." />
+            ) : (
+              <ul className="today-list">
+                {data.next.map((b) => (
+                  <li key={b.id}>
+                    <Avatar name={b.user_name} size={36} />
+                    <div>
+                      <strong>{b.user_name}</strong>
+                      <small>{b.service}</small>
+                    </div>
+                    <span className="today-time coming-when">
+                      {fmtDateLong(b.slot_date)}
+                      <small>{fmtRange(b.start_time, b.end_time)}</small>
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
         </>
       )}
     </>
